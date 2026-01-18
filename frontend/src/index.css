@@ -14,12 +14,12 @@
 
 @layer components {
   .maplibregl-popup-content {
-    @apply rounded-xl border border-white/10 bg-slate-900 text-slate-100 shadow-xl;
+    @apply rounded-xl border border-transparent bg-transparent text-slate-100 shadow-none;
   }
 
   .maplibregl-popup-tip {
-    border-top-color: rgb(15 23 42);
-    border-bottom-color: rgb(15 23 42);
+    border-top-color: transparent;
+    border-bottom-color: transparent;
   }
 
   .vital-sign-monitor {

@@ -20,8 +20,12 @@ export default function EventMarker({
   onHover,
 }: EventMarkerProps) {
   const isEmergency = event.severity === "emergency";
+
   const severityGlow = isEmergency ? "bg-red-500" : "bg-amber-400";
   const pulse = isEmergency ? "animate-ping" : "animate-pulse";
+
+  const innerBg = isEmergency ? "bg-red-500" : "bg-amber-400/70";
+  const innerBorder = isEmergency ? "border-red-300/40" : "border-amber-300/40";
 
   return (
     <Marker longitude={event.lng} latitude={event.lat}>
@@ -29,26 +33,21 @@ export default function EventMarker({
         type="button"
         onClick={onSelect}
         onMouseEnter={() =>
-          onHover({
-            label: event.title,
-            lng: event.lng,
-            lat: event.lat,
-          })
+          onHover({ label: event.title, lng: event.lng, lat: event.lat })
         }
         onMouseLeave={() => onHover(null)}
         className="relative flex h-10 w-10 items-center justify-center"
         aria-label={event.title}
       >
+        {/* Pulsing glow */}
         <span
           className={`absolute inline-flex h-10 w-10 rounded-full opacity-30 ${severityGlow} ${pulse}`}
         />
+
+        {/* Inner circle */}
         <span
-          className={`relative flex h-8 w-8 items-center justify-center rounded-full border ${
-            isSelected
-              ? "border-white bg-red-500"
-              : isRelated
-                ? "border-red-300/70 bg-red-500/80"
-                : "border-red-300/40 bg-red-500/70"
+          className={`relative flex h-8 w-8 items-center justify-center rounded-full border ${innerBorder} ${innerBg} ${
+            isSelected ? "border-white" : isRelated ? "border-opacity-70" : ""
           }`}
         >
           <span className="text-white">!</span>

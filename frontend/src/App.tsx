@@ -34,11 +34,16 @@ function App() {
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<
     string[]
   >([]);
-  const [activeTab, setActiveTab] = useState<"map" | "events" | "statistics">("map");
+  const [activeTab, setActiveTab] = useState<"map" | "events" | "statistics">(
+    "map",
+  );
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const items = events
-      .filter((event) => isEmergencySeverity(event.severity))
+      .filter(
+        (event) =>
+          isEmergencySeverity(event.severity) && event.status !== "resolved",
+      )
       .map((event) => {
         const assignedAmbulance = ambulances.find(
           (ambulance) => String(ambulance._id) === String(event.ambulance_id),
@@ -79,7 +84,7 @@ function App() {
       <div className="relative flex h-full flex-col">
         <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className="relative flex flex-1 overflow-hidden">
+        <div className="relative flex flex-1 min-h-0 overflow-hidden">
           {activeTab === "map" ? (
             <>
               <main className="flex-1">
@@ -136,7 +141,8 @@ function App() {
               <CameraDrawer
                 camera={selectedEntity as Camera}
                 events={events.filter(
-                  (event) => event.camera_id === (selectedEntity as Camera)._id,
+                  (event) =>
+                    event.camera_name === (selectedEntity as Camera).name,
                 )}
               />
             )}

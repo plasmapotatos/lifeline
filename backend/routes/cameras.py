@@ -47,7 +47,7 @@ async def trigger_emergency(
         reference_clip_url=payload.reference_clip_url,
         lat=jitter_lat,
         lng=jitter_lng,
-        camera_id=camera.id,
+        camera_name=camera.name,
         status=EventStatus.OPEN,
         created_at=datetime.now(timezone.utc),
     )

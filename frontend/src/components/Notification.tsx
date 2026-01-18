@@ -51,7 +51,7 @@ export function Notification({
     const timer = window.setTimeout(onClose, duration);
     return () => window.clearTimeout(timer);
   }, [duration, onClose]);
-
+  console.log(message);
   return (
     <motion.div
       layout
@@ -61,8 +61,8 @@ export function Notification({
       transition={{ duration: 0.2 }}
       className={`pointer-events-auto rounded-2xl border px-4 py-3 shadow-lg backdrop-blur ${stylesByType[type]}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-semibold">{message}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold flex-grow break-words">{message}</p>
         <Button
           variant="ghost"
           size="sm"

@@ -17,8 +17,7 @@ export type Event = {
   reference_clip_url: string;
   lat: number;
   lng: number;
-  camera_id: string;
-  camera_name?: string | null;
+  camera_name: string;
   ambulance_id: string | null;
   status: EventStatus;
   created_at: string | Date;

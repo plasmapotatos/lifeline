@@ -34,7 +34,7 @@ export default function CameraMarker({
           })
         }
         onMouseLeave={() => onHover(null)}
-        className="relative flex h-9 w-9 items-center justify-center"
+        className="relative flex h-9 w-9 items-center justify-center z-[100]"
         aria-label={cameraLabel}
       >
         <span

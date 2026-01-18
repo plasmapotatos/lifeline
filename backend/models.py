@@ -41,7 +41,7 @@ class Event(Document):
     reference_clip_url: str
     lat: float
     lng: float
-    camera_id: PydanticObjectId
+    camera_name: str
     ambulance_id: Optional[PydanticObjectId] = None
     status: EventStatus = EventStatus.OPEN
     created_at: datetime

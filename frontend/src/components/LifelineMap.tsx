@@ -77,7 +77,7 @@ export default function LifelineMap({ selection, onSelect }: LifelineMapProps) {
       const event = events.find((item) => item._id === selection.id);
       return {
         events: new Set(event ? [event._id] : []),
-        cameras: new Set(event?.camera_id ? [event.camera_id] : []),
+        cameras: new Set(event?.camera_name ? [event.camera_name] : []),
         ambulances: new Set(
           event?.ambulance_id ? [String(event.ambulance_id)] : [],
         ),

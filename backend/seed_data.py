@@ -1,6 +1,6 @@
 """Seed initial cameras, hospitals, and ambulances (wipes DB first)."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import os
 
@@ -101,19 +101,116 @@ async def seed_data():
     hospitals = [Hospital(**hosp) for hosp in hospitals_data]
     await Hospital.insert_many(hospitals)
 
-    event_location = Point(lat=base_lat + 0.0032, lng=base_lng + 0.0018)
-    first_event = Event(
-        severity=Severity.EMERGENCY,
-        title="Auto-seeded event",
-        description="Simulated emergency event for demo",
-        reference_clip_url="http://localhost:5055/latest_clip.mp4",
-        lat=event_location.lat,
-        lng=event_location.lng,
-        camera_id=cameras[0].id,
-        status=EventStatus.OPEN,
-        created_at=datetime.utcnow(),
-    )
-    await first_event.insert()
+    now = datetime.utcnow()
+
+    events_data = [
+        # Camera 1 - 1 event
+        {
+            "camera": cameras[0],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Loose trash on street",
+            "description": "Minor debris observed, no hazard.",
+            "created_at": now - timedelta(hours=2),
+        },
+        # Camera 2 - 2 events
+        {
+            "camera": cameras[1],
+            "severity": Severity.EMERGENCY,
+            "title": "Person fell on sidewalk",
+            "description": "Immediate attention needed, potential injury.",
+            "created_at": now - timedelta(hours=1, minutes=30),
+        },
+        {
+            "camera": cameras[1],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Car parked illegally",
+            "description": "Reported for city authorities.",
+            "created_at": now - timedelta(hours=1, minutes=15),
+        },
+        # Camera 3 - 3 events
+        {
+            "camera": cameras[2],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Street litter noticed",
+            "description": "Routine observation.",
+            "created_at": now - timedelta(hours=1),
+        },
+        {
+            "camera": cameras[2],
+            "severity": Severity.EMERGENCY,
+            "title": "Bicycle accident",
+            "description": "Cyclist down, requires assistance.",
+            "created_at": now - timedelta(minutes=45),
+        },
+        {
+            "camera": cameras[2],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Pedestrian crossing safely",
+            "description": "No emergency.",
+            "created_at": now - timedelta(minutes=30),
+        },
+    ]
+
+    # 🔹 Additional unresolved informational events (health-related)
+    events = []
+    health_events_data = [
+        {
+            "camera": cameras[0],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Person stretching in park",
+            "description": "Observed person doing light exercise, no medical attention needed.",
+            "created_at": now - timedelta(minutes=20),
+        },
+        {
+            "camera": cameras[1],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Elderly individual walking slowly",
+            "description": "No distress observed, monitoring for safety.",
+            "created_at": now - timedelta(minutes=15),
+        },
+        {
+            "camera": cameras[2],
+            "severity": Severity.INFORMATIONAL,
+            "title": "Jogger taking break",
+            "description": "Routine observation, no emergency.",
+            "created_at": now - timedelta(minutes=10),
+        },
+    ]
+
+    for e in health_events_data:
+        event = Event(
+            severity=e["severity"],
+            title=e["title"],
+            description=e["description"],
+            reference_clip_url=f"{e['camera'].url}/latest_clip.mp4",
+            lat=e["camera"].lat + 0.0003,
+            lng=e["camera"].lng + 0.0003,
+            camera_name=e["camera"].name,
+            status=EventStatus.OPEN,  # Unresolved
+            created_at=e["created_at"],
+            resolved_at=None,
+        )
+        events.append(event)
+
+    for e in events_data:
+        resolved_at = e["created_at"] + timedelta(minutes=30)
+        event = Event(
+            severity=e["severity"],
+            title=e["title"],
+            description=e["description"],
+            reference_clip_url=f"{e['camera'].url}/latest_clip.mp4",
+            lat=e["camera"].lat + 0.0005,
+            lng=e["camera"].lng + 0.0005,
+            camera_name=e["camera"].name,
+            status=EventStatus.RESOLVED,
+            created_at=e["created_at"],
+            resolved_at=resolved_at,
+        )
+        events.append(event)
+
+    await Event.insert_many(events)
+
+    logger.info(f"✅ Seeded {len(events_data)} resolved + 3 unresolved health events")
 
     # 🔹 Seed ambulances (one per hospital)
     ambulances = [

@@ -28,7 +28,7 @@ async def _walk_path(
 ) -> None:
     # Initialize ETA to total number of seconds remaining
     eta_seconds = len(path) * (update_interval_ms / 1000)
-
+    print("Starting ambulance walk:", ambulance.id, path, eta_seconds)
     while path:
         next_point = path.pop(0)
         _set_location(ambulance, next_point)
@@ -37,6 +37,7 @@ async def _walk_path(
 
         # Update ETA
         ambulance.eta_seconds = max(0, eta_seconds)
+        print("Ambulance moving to:", next_point, "ETA:", ambulance.eta_seconds)
         await ambulance.save()
         await broadcast_all("ambulances")
 
@@ -86,7 +87,7 @@ async def simulate_ambulance(
 
     ambulance.path = []
     ambulance.status = AmbulanceStatus.IDLE
-    ambulance.eta = None
+    ambulance.eta_seconds = None
     await ambulance.save()
     await broadcast_all("ambulances")
 

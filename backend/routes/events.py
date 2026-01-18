@@ -20,7 +20,6 @@ class EventResponse(BaseModel):
     reference_clip_url: str
     lat: float
     lng: float
-    camera_id: str
     camera_name: Optional[str] = None
     ambulance_id: Optional[str] = None
     status: str
@@ -30,10 +29,10 @@ class EventResponse(BaseModel):
     @classmethod
     async def from_event(cls, event: Event) -> "EventResponse":
         """Convert Event document to EventResponse."""
-        # Fetch camera name if camera_id exists
+        # Fetch camera name if camera_name exists
         camera_name = None
-        if event.camera_id:
-            camera = await Camera.get(event.camera_id)
+        if event.camera_name:
+            camera = await Camera.get(event.camera_name)
             camera_name = camera.name if camera else None
         return cls(
             id=str(event.id),
@@ -43,7 +42,6 @@ class EventResponse(BaseModel):
             reference_clip_url=event.reference_clip_url,
             lat=event.lat,
             lng=event.lng,
-            camera_id=str(event.camera_id),
             camera_name=camera_name,
             ambulance_id=str(event.ambulance_id) if event.ambulance_id else None,
             status=event.status.value,

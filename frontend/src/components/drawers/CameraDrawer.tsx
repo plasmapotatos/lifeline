@@ -88,7 +88,7 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
                 disabled={isTriggering}
                 className="flex-1 rounded-xl border-2 border-red-500 bg-red-500/30 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/40 disabled:opacity-50"
               >
-                {isTriggering ? "Triggering..." : "Confirm Emergency"}
+                {isTriggering ? "Triggering..." : "Confirm"}
               </button>
 
               <button

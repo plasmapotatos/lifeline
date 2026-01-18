@@ -134,7 +134,7 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
         accessorKey: "camera_name",
         cell: (info: CellContext<Event, unknown>) => {
           const event = info.row.original;
-          const camera = cameras.find((cam) => cam._id === event.camera_id);
+          const camera = cameras.find((cam) => cam.name === event.camera_name);
           const cameraName = camera ? camera.name || camera._id : "—";
           return (
             <span className="text-slate-300 font-mono text-xs">
@@ -202,7 +202,7 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex flex-col items-end">
+          {/* <div className="flex flex-col items-end">
             <span className="text-xs text-slate-400">
               {isRefetching ? "Refreshing..." : "Next refresh in"}
             </span>
@@ -211,7 +211,7 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
             >
               {isRefetching ? "..." : `${nextEventCountdown}s`}
             </span>
-          </div>
+          </div> */}
           <button
             type="button"
             disabled={isRefetching}
@@ -239,66 +239,69 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
       )}
 
       {!isLoading && !isError && (
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <table className="min-w-full divide-y divide-white/10 text-sm">
-            <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wider text-slate-400">
-              {table
-                .getHeaderGroups()
-                .map((headerGroup: HeaderGroup<Event>) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="px-4 py-3">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-            </thead>
-            <tbody className="divide-y divide-white/5 bg-slate-950">
-              {table.getRowModel().rows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="px-4 py-8 text-center text-slate-400"
-                  >
-                    No events yet. New events will appear every 10 seconds.
-                  </td>
-                </tr>
-              ) : (
-                table.getRowModel().rows.map((row: Row<Event>) => {
-                  const event = row.original;
-                  const isNew = event.created_at
-                    ? Date.now() - new Date(event.created_at).getTime() < 15000
-                    : false;
-                  return (
-                    <tr
-                      key={row.id}
-                      className={`cursor-pointer transition ${
-                        isNew
-                          ? "bg-cyan-500/5 border-l-2 border-l-cyan-500"
-                          : "hover:bg-slate-900/40"
-                      }`}
-                      onClick={() => onSelectEvent?.(event._id)}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </td>
+        <div className="flex-1 overflow-hidden rounded-2xl border border-white/10">
+          <div className="max-h-full overflow-y-auto">
+            <table className="min-w-full divide-y divide-white/10 text-sm">
+              <thead className="bg-slate-900/60 text-left text-xs uppercase tracking-wider text-slate-400">
+                {table
+                  .getHeaderGroups()
+                  .map((headerGroup: HeaderGroup<Event>) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th key={header.id} className="px-4 py-3">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                        </th>
                       ))}
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ))}
+              </thead>
+              <tbody className="divide-y divide-white/5 bg-slate-950">
+                {table.getRowModel().rows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="px-4 py-8 text-center text-slate-400"
+                    >
+                      No events yet. New events will appear every 10 seconds.
+                    </td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map((row: Row<Event>) => {
+                    const event = row.original;
+                    const isNew = event.created_at
+                      ? Date.now() - new Date(event.created_at).getTime() <
+                        15000
+                      : false;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`cursor-pointer transition ${
+                          isNew
+                            ? "bg-cyan-500/5 border-l-2 border-l-cyan-500"
+                            : "hover:bg-slate-900/40"
+                        }`}
+                        onClick={() => onSelectEvent?.(event._id)}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-4 py-3">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
