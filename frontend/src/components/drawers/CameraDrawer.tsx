@@ -3,6 +3,25 @@ import { getLatestClipURL, triggerCameraEmergency } from "../../api/controller";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Camera, Event } from "../../types";
 
+const formatTimeAgo = (timestamp?: string | Date | null) => {
+  if (!timestamp) return "—";
+  const date =
+    typeof timestamp === "string" ? new Date(timestamp + "Z") : timestamp;
+  if (Number.isNaN(date.getTime())) return "—";
+  const now = new Date();
+  const seconds = Math.max(
+    0,
+    Math.floor((now.getTime() - date.getTime()) / 1000),
+  );
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
 type CameraDrawerProps = {
   camera: Camera;
   events: Event[];
@@ -13,6 +32,7 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [description, setDescription] = useState("");
   const queryClient = useQueryClient();
+  console.log("camera events:", events);
 
   const handleTriggerEmergency = async () => {
     if (!showConfirm) {
@@ -117,7 +137,12 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
               key={event._id}
               className="rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2"
             >
-              {event.title}
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate">{event.title}</span>
+                <span className="text-[10px] text-slate-500">
+                  {formatTimeAgo(event.created_at)}
+                </span>
+              </div>
             </li>
           ))}
           {events.length === 0 && (

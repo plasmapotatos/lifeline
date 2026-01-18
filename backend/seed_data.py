@@ -88,12 +88,12 @@ async def seed_data():
         },
         {
             "name": "UPMC Mercy",
-            "lat": base_lat + -0.0046,
+            "lat": base_lat + -0.0062,
             "lng": base_lng + 0.0104,
         },
         {
             "name": "Allegheny General Hospital",
-            "lat": base_lat + 0.0160,
+            "lat": base_lat + 0.0180,
             "lng": base_lng + -0.0074,
         },
     ]
