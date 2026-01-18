@@ -8,7 +8,7 @@ import {
 } from "../api/controller";
 import type { Ambulance, Camera, Event, Hospital, Statistics } from "../types";
 
-const REFRESH_INTERVAL = 10000; // Match the 10-second analysis interval
+const REFRESH_INTERVAL = 2000; // Match the 10-second analysis interval
 
 /**
  * Fetch emergency events with auto-refresh.
