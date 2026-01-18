@@ -10,11 +10,12 @@ type EventDrawerProps = {
  */
 export default function EventDrawer({ event, ambulances }: EventDrawerProps) {
   const assigned = ambulances.find(
-    (ambulance) => String(ambulance.id) === String(event.ambulance_id),
+    (ambulance) => String(ambulance._id) === String(event.ambulance_id),
   );
   const etaMinutes = assigned
-    ? Math.max(1, Math.round(assigned.eta_seconds / 60))
+    ? Math.max(1, Math.round((assigned.eta_seconds ?? 0) / 60))
     : null;
+  console.log(event);
 
   return (
     <div className="space-y-4">
@@ -39,11 +40,18 @@ export default function EventDrawer({ event, ambulances }: EventDrawerProps) {
           Reference frame and AI assessment embedded below.
         </div>
       </div>
-      <img
-        src={event.reference_clip_url}
-        alt="AI reference frame"
-        className="w-full rounded-2xl border border-white/10"
-      />
+      <div className="w-full rounded-2xl border border-white/10 overflow-hidden">
+        <video
+          src={event.reference_clip_url}
+          controls
+          autoPlay={false}
+          loop
+          muted
+          className="w-full rounded-2xl"
+        >
+          Your browser does not support the video tag.
+        </video>
+      </div>
     </div>
   );
 }

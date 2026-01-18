@@ -35,7 +35,7 @@ camera/.latest_clip*.mp4
 camera/.buffer.mp4
 camera/.tmp_frames*/
 camera/clip*.mp4
-
+.recent*
 # Database
 backend/lifeline.db
 backend/*.db

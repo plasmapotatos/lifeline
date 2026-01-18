@@ -26,7 +26,7 @@ class AmbulanceStatus(str, Enum):
 class Camera(Document):
     lat: float
     lng: float
-    latest_frame_url: str
+    url: str
     name: Optional[str] = None
 
     class Settings:
@@ -55,6 +55,7 @@ class Event(Document):
 class Ambulance(Document):
     lat: float
     lng: float
+    name: str
     status: AmbulanceStatus = AmbulanceStatus.IDLE
     event_id: Optional[PydanticObjectId] = None
     eta_seconds: Optional[int] = None

@@ -13,7 +13,9 @@ import FormData from "form-data";
  * =========================
  */
 const PORT = parseInt(process.env.PORT || "5055", 10);
-const CAMERA_LOCATION = process.env.CAMERA_LOCATION || process.env.CAMERA_NAME || "CAM_12";
+const CAMERA_LOCATION =
+  process.env.CAMERA_LOCATION || process.env.CAMERA_NAME || "CAM_12";
+const RECENT_WINDOW_SECS = 5;
 
 // Use a looping mp4 as the camera feed (stable for hackathon demos)
 // Can be overridden via VIDEO_INPUT environment variable for different cameras
@@ -23,16 +25,18 @@ const VIDEO_INPUT = process.env.VIDEO_INPUT || "./clip.mp4";
 const CLIP_FILE_NAME = `.latest_clip_${CAMERA_LOCATION}.mp4`;
 
 // Frame + clip settings
-const FPS = 10;               // capture fps into buffer (10 is enough)
-const WINDOW_SECS = 10;       // rolling window length for clip
+const FPS = 3; // capture fps into buffer (10 is enough)
+const WINDOW_SECS = 10; // rolling window length for clip
 
 /**
  * =========================
  * Env
  * =========================
  */
-const OVERSHOOT_API_KEY = process.env.OVERSHOOT_API_KEY || "ovs_16e2ba18927ea6bfa68cc5bd90048d1f";
-const OVERSHOOT_API_URL = process.env.OVERSHOOT_API_URL || "https://cluster1.overshoot.ai/api/v0.2";
+const OVERSHOOT_API_KEY =
+  process.env.OVERSHOOT_API_KEY || "ovs_16e2ba18927ea6bfa68cc5bd90048d1f";
+const OVERSHOOT_API_URL =
+  process.env.OVERSHOOT_API_URL || "https://cluster1.overshoot.ai/api/v0.2";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 const USE_MOCK_ANALYSIS = process.env.USE_MOCK_ANALYSIS === "true"; // Set to "true" to bypass Overshoot
 
@@ -54,6 +58,7 @@ let latestFrameTs: number | null = null;
 let latestClipPath: string | null = null;
 let latestClipTs: number | null = null;
 let lastAnalyzedAt: number = 0; // Track when we last analyzed (by time, not clip timestamp)
+const mjpegClients = new Set<express.Response>();
 
 /**
  * =========================
@@ -72,6 +77,21 @@ app.get("/latest_frame", (_req, res) => {
   res.setHeader("Content-Type", "image/jpeg");
   res.setHeader("Cache-Control", "no-store");
   res.send(latestFrame);
+});
+
+app.get("/mjpeg", (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "multipart/x-mixed-replace; boundary=frame",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    Pragma: "no-cache",
+  });
+
+  mjpegClients.add(res);
+
+  req.on("close", () => {
+    mjpegClients.delete(res);
+  });
 });
 
 // Latest clip as MP4
@@ -112,6 +132,50 @@ app.get("/latest_state", (_req, res) => {
   });
 });
 
+app.get("/get_recent", async (_req, res) => {
+  try {
+    const neededFrames = FPS * RECENT_WINDOW_SECS;
+
+    if (frames.length < neededFrames) {
+      return res.status(400).json({
+        ok: false,
+        message: "Not enough buffered frames yet",
+      });
+    }
+
+    const framesToUse = frames.slice(-neededFrames);
+
+    const fileName = `.recent_clip_${CAMERA_LOCATION}_${Date.now()}.mp4`;
+    const clipAbs = path.resolve(process.cwd(), fileName);
+
+    await buildClipFromFrames(clipAbs, framesToUse);
+
+    // Serve the file statically
+    app.get(`/recent/${fileName}`, (_req2, res2) => {
+      if (!fs.existsSync(clipAbs)) {
+        return res2.status(404).send("Clip expired");
+      }
+      res2.setHeader("Content-Type", "video/mp4");
+      res2.setHeader("Cache-Control", "no-store");
+      res2.send(fs.readFileSync(clipAbs));
+    });
+
+    res.json({
+      ok: true,
+      clip_url: `http://localhost:${PORT}/recent/${fileName}`,
+      seconds: RECENT_WINDOW_SECS,
+    });
+
+    console.log(`[Recent] Created recent clip: ${clipAbs}`);
+  } catch (e) {
+    console.error("[Recent] Failed to build recent clip:", e);
+    res.status(500).json({
+      ok: false,
+      message: "Failed to generate recent clip",
+    });
+  }
+});
+
 /**
  * =========================
  * Frame capture (ffmpeg MJPEG -> stdout)
@@ -128,15 +192,15 @@ function startFrameCapture() {
   console.log("Starting frame capture from:", inputAbs);
 
   const ff = spawn("ffmpeg", [
-    "-re",                    // read input at its native pace
+    "-re", // read input at its native pace
     "-stream_loop",
-    "-1",                     // loop forever (for file sources)
+    "-1", // loop forever (for file sources)
     "-i",
     inputAbs,
     "-vf",
-    `fps=${FPS}`,             // sample to FPS
+    `fps=${FPS}`, // sample to FPS
     "-f",
-    "mjpeg",                  // output MJPEG stream
+    "mjpeg", // output MJPEG stream
     "pipe:1",
   ]);
 
@@ -162,6 +226,20 @@ function startFrameCapture() {
       const ts = Date.now();
       latestFrame = jpg;
       latestFrameTs = ts;
+
+      for (const client of mjpegClients) {
+        try {
+          client.write(
+            `--frame\r\n` +
+              `Content-Type: image/jpeg\r\n` +
+              `Content-Length: ${jpg.length}\r\n\r\n`,
+          );
+          client.write(jpg);
+          client.write("\r\n");
+        } catch {
+          mjpegClients.delete(client);
+        }
+      }
 
       frames.push({ ts, jpg });
       if (frames.length > MAX_FRAMES) frames.shift();
@@ -207,7 +285,9 @@ async function buildClipFromFrames(outPath: string, framesToUse: Frame[]) {
 
     ff.stderr.on("data", () => {});
     ff.on("error", reject);
-    ff.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg clip exit ${code}`))));
+    ff.on("close", (code) =>
+      code === 0 ? resolve() : reject(new Error(`ffmpeg clip exit ${code}`)),
+    );
   });
 }
 
@@ -230,36 +310,64 @@ function canSendEmergency(): boolean {
   return true;
 }
 
-async function runMockAnalysis(): Promise<{ title: string; description: string; severity: Severity }> {
+async function runMockAnalysis(): Promise<{
+  title: string;
+  description: string;
+  severity: Severity;
+}> {
   // Mock analysis for testing - generates alternating informational/emergency events
   const mockEvents = [
-    { title: "Person walking normally", description: "Normal pedestrian activity observed", severity: "informational" as Severity },
-    { title: "Person collapsed on ground", description: "Individual appears to have fallen and not moving", severity: "emergency" as Severity },
-    { title: "Vehicle passing by", description: "Standard traffic flow observed", severity: "informational" as Severity },
-    { title: "Person lying motionless", description: "Individual on ground showing no movement", severity: "emergency" as Severity },
-    { title: "Normal street activity", description: "Regular pedestrian and vehicle movement", severity: "informational" as Severity },
+    {
+      title: "Person walking normally",
+      description: "Normal pedestrian activity observed",
+      severity: "informational" as Severity,
+    },
+    {
+      title: "Person collapsed on ground",
+      description: "Individual appears to have fallen and not moving",
+      severity: "emergency" as Severity,
+    },
+    {
+      title: "Vehicle passing by",
+      description: "Standard traffic flow observed",
+      severity: "informational" as Severity,
+    },
+    {
+      title: "Person lying motionless",
+      description: "Individual on ground showing no movement",
+      severity: "emergency" as Severity,
+    },
+    {
+      title: "Normal street activity",
+      description: "Regular pedestrian and vehicle movement",
+      severity: "informational" as Severity,
+    },
   ];
-  
+
   const randomEvent = mockEvents[Math.floor(Math.random() * mockEvents.length)];
   console.log(`[Analysis] Mock analysis result:`, randomEvent);
   return randomEvent;
 }
 
-async function runOvershootAnalysis(clipPath: string): Promise<{ title: string; description: string; severity: Severity } | null> {
+async function runOvershootAnalysis(
+  clipPath: string,
+): Promise<{ title: string; description: string; severity: Severity } | null> {
   try {
     console.log(`[Analysis] Starting Overshoot analysis for clip: ${clipPath}`);
-    
+
     // Read the clip file
     const clipBuffer = fs.readFileSync(clipPath);
-    console.log(`[Analysis] Clip file size: ${(clipBuffer.length / 1024 / 1024).toFixed(2)} MB`);
-    
+    console.log(
+      `[Analysis] Clip file size: ${(clipBuffer.length / 1024 / 1024).toFixed(2)} MB`,
+    );
+
     // Create form data for Overshoot API
     const formData = new FormData();
     formData.append("file", clipBuffer, {
       filename: "clip.mp4",
       contentType: "video/mp4",
     });
-    
+
     const prompt = `You are monitoring city security footage.
 
 Return STRICT JSON only:
@@ -284,23 +392,28 @@ Keep description under 25 words.
 Do not include any extra keys or text.`;
 
     formData.append("prompt", prompt);
-    formData.append("outputSchema", JSON.stringify({
-      type: "object",
-      properties: {
-        title: { type: "string" },
-        description: { type: "string" },
-        severity: { type: "string", enum: ["informational", "emergency"] },
-      },
-      required: ["title", "description", "severity"],
-    }));
+    formData.append(
+      "outputSchema",
+      JSON.stringify({
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          description: { type: "string" },
+          severity: { type: "string", enum: ["informational", "emergency"] },
+        },
+        required: ["title", "description", "severity"],
+      }),
+    );
 
-    console.log(`[Analysis] Calling Overshoot API: ${OVERSHOOT_API_URL}/analyze`);
-    
+    console.log(
+      `[Analysis] Calling Overshoot API: ${OVERSHOOT_API_URL}/analyze`,
+    );
+
     // Call Overshoot HTTP API
     const response = await fetch(`${OVERSHOOT_API_URL}/analyze`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OVERSHOOT_API_KEY}`,
+        Authorization: `Bearer ${OVERSHOOT_API_KEY}`,
         ...formData.getHeaders(),
       },
       body: formData,
@@ -310,13 +423,18 @@ Do not include any extra keys or text.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[Analysis] Overshoot API error: ${response.status} ${errorText}`);
+      console.error(
+        `[Analysis] Overshoot API error: ${response.status} ${errorText}`,
+      );
       return null;
     }
 
     const result: any = await response.json();
-    console.log(`[Analysis] Overshoot raw response:`, JSON.stringify(result, null, 2));
-    
+    console.log(
+      `[Analysis] Overshoot raw response:`,
+      JSON.stringify(result, null, 2),
+    );
+
     // Parse the result (might be in result.result or directly in response)
     let parsed: any;
     if (typeof result === "string") {
@@ -326,9 +444,9 @@ Do not include any extra keys or text.`;
     } else {
       parsed = result;
     }
-    
+
     console.log(`[Analysis] Parsed result:`, parsed);
-    
+
     return {
       title: parsed.title,
       description: parsed.description,
@@ -341,7 +459,11 @@ Do not include any extra keys or text.`;
   }
 }
 
-async function postEventToBackend(result: { title: string; description: string; severity: Severity }) {
+async function postEventToBackend(result: {
+  title: string;
+  description: string;
+  severity: Severity;
+}) {
   try {
     const payload = {
       camera_id: CAMERA_LOCATION,
@@ -350,10 +472,10 @@ async function postEventToBackend(result: { title: string; description: string; 
       description: result.description,
       reference_clip_url: `http://localhost:${PORT}/latest_clip.mp4`, // Each camera serves its own clip at its own port
     };
-    
+
     console.log(`[Analysis] Posting event to backend:`, payload);
     console.log(`[Analysis] Backend URL: ${BACKEND_URL}/process_event`);
-    
+
     const response = await fetch(`${BACKEND_URL}/process_event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -367,7 +489,9 @@ async function postEventToBackend(result: { title: string; description: string; 
     console.log(`[Analysis] Backend response text:`, responseText);
 
     if (!response.ok) {
-      console.error(`[Analysis] Backend POST error: ${response.status} - ${responseText}`);
+      console.error(
+        `[Analysis] Backend POST error: ${response.status} - ${responseText}`,
+      );
       return false;
     }
 
@@ -386,7 +510,9 @@ async function postEventToBackend(result: { title: string; description: string; 
       lastEmergencyDescription = result.description;
     }
 
-    console.log(`[Analysis] ✅ Successfully posted ${result.severity} event: ${result.title}`);
+    console.log(
+      `[Analysis] ✅ Successfully posted ${result.severity} event: ${result.title}`,
+    );
     return true;
   } catch (e) {
     console.error("[Analysis] Backend POST error:", (e as Error).message);
@@ -415,19 +541,27 @@ async function runAnalysisAndPost() {
       console.log(`[Analysis] Waiting ${remaining}s until next analysis`);
       return; // Not yet time for next analysis (wait for new 10-second window)
     }
-    
-    console.log(`[Analysis] Starting analysis (${Math.floor((now - lastAnalyzedAt) / 1000)}s since last)`);
+
+    console.log(
+      `[Analysis] Starting analysis (${Math.floor((now - lastAnalyzedAt) / 1000)}s since last)`,
+    );
 
     // Run analysis (Overshoot or mock)
-    let result: { title: string; description: string; severity: Severity } | null;
-    
+    let result: {
+      title: string;
+      description: string;
+      severity: Severity;
+    } | null;
+
     if (USE_MOCK_ANALYSIS) {
       console.log("[Analysis] Using MOCK analysis mode (bypassing Overshoot)");
       result = await runMockAnalysis();
     } else {
       result = await runOvershootAnalysis(latestClipPath);
       if (!result) {
-        console.warn("[Analysis] Overshoot analysis returned null, skipping post");
+        console.warn(
+          "[Analysis] Overshoot analysis returned null, skipping post",
+        );
         return; // Analysis failed, try again next time
       }
     }
@@ -437,7 +571,8 @@ async function runAnalysisAndPost() {
     // Apply cooldown and deduplication for emergencies only
     if (result.severity === "emergency") {
       const isDuplicate =
-        lastEmergencyTitle === result.title && lastEmergencyDescription === result.description;
+        lastEmergencyTitle === result.title &&
+        lastEmergencyDescription === result.description;
       if (isDuplicate) {
         // Still mark as analyzed even if duplicate
         lastAnalyzedAt = now;
@@ -452,13 +587,17 @@ async function runAnalysisAndPost() {
 
     // Post to backend (for both informational and emergency events)
     const posted = await postEventToBackend(result);
-    
+
     // Only mark as analyzed if post succeeded (prevents repeated failures from being hidden)
     if (posted) {
       lastAnalyzedAt = now;
-      console.log(`[Analysis] ✅ Successfully posted ${result.severity} event: ${result.title}`);
+      console.log(
+        `[Analysis] ✅ Successfully posted ${result.severity} event: ${result.title}`,
+      );
     } else {
-      console.warn(`[Analysis] ❌ Failed to post ${result.severity} event: ${result.title} - will retry next cycle`);
+      console.warn(
+        `[Analysis] ❌ Failed to post ${result.severity} event: ${result.title} - will retry next cycle`,
+      );
       // Don't set lastAnalyzedAt - this allows retry in the next cycle
     }
   } catch (e) {
@@ -470,7 +609,9 @@ async function runAnalysisAndPost() {
 
 function startAnalysisLoop() {
   console.log("Starting analysis loop...");
-  console.log(`[Analysis] Mock mode: ${USE_MOCK_ANALYSIS ? "ENABLED" : "DISABLED"}`);
+  console.log(
+    `[Analysis] Mock mode: ${USE_MOCK_ANALYSIS ? "ENABLED" : "DISABLED"}`,
+  );
   console.log(`[Analysis] Backend URL: ${BACKEND_URL}`);
   console.log(`[Analysis] Camera ID: ${CAMERA_LOCATION}`);
   // Run every 10s to analyze each new 10-second clip window
@@ -508,7 +649,7 @@ function startClipLoop() {
     } catch (e) {
       console.warn("Clip build error:", (e as Error).message);
     }
-  }, 1000);
+  }, 10000);
 }
 
 /**

@@ -3,8 +3,8 @@ import Button from "./Button";
 type NavbarProps = {
   userName?: string;
   userRole?: string;
-  activeTab?: "map" | "events" | "statistics";
-  onTabChange?: (tab: "map" | "events" | "statistics") => void;
+  activeTab?: "map" | "events";
+  onTabChange?: (tab: "map" | "events") => void;
 };
 
 /**
@@ -20,13 +20,8 @@ export default function Navbar({
     <nav className="flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-6 py-4 backdrop-blur">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3">
-          <div className="vital-sign-monitor">
-            <div className="vital-sign-line">
-              <svg viewBox="0 0 80 20" preserveAspectRatio="none">
-                {/* Compact EKG/heartbeat pattern - smaller but more pronounced */}
-                <path d="M0,10 L15,10 L17,1 L19,19 L21,1 L23,19 L25,10 L50,10 L52,4 L54,16 L56,2 L58,18 L60,10 L80,10" />
-              </svg>
-            </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-lg font-semibold text-cyan-200">
+            L
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-[0.2em] text-cyan-200">
@@ -58,17 +53,6 @@ export default function Navbar({
               }`}
             >
               Events
-            </button>
-            <button
-              type="button"
-              onClick={() => onTabChange("statistics")}
-              className={`rounded-full px-4 py-1 transition ${
-                activeTab === "statistics"
-                  ? "bg-cyan-500/20 text-cyan-200"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              Statistics
             </button>
           </div>
         )}

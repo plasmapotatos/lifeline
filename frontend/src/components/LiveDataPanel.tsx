@@ -16,8 +16,8 @@ export default function LiveDataPanel() {
           <p className="text-slate-400">Ambulances</p>
           <ul className="space-y-1">
             {ambulances.slice(0, 3).map((unit) => (
-              <li key={unit.id} className="flex justify-between">
-                <span>Unit {unit.id}</span>
+              <li key={unit._id} className="flex justify-between">
+                <span>Unit {unit.name}</span>
                 <span className="text-slate-400">
                   {unit.lat.toFixed(3)}, {unit.lng.toFixed(3)}
                 </span>
@@ -32,7 +32,7 @@ export default function LiveDataPanel() {
           <p className="text-slate-400">Events</p>
           <ul className="space-y-1">
             {events.slice(0, 3).map((event) => (
-              <li key={event.id} className="truncate">
+              <li key={event._id} className="truncate">
                 {event.title}
               </li>
             ))}
@@ -45,8 +45,8 @@ export default function LiveDataPanel() {
           <p className="text-slate-400">Cameras</p>
           <ul className="space-y-1">
             {cameras.slice(0, 3).map((camera) => (
-              <li key={camera.id} className="truncate">
-                {camera.name ?? camera.id}
+              <li key={camera._id} className="truncate">
+                {camera.name ?? camera._id}
               </li>
             ))}
             {cameras.length === 0 && (

@@ -4,15 +4,8 @@ import {
   getCameras,
   getEvents,
   getHospitals,
-  getStatistics,
 } from "../api/controller";
-import {
-  mockAmbulances,
-  mockCameras,
-  mockEvents,
-  mockHospitals,
-} from "../seed";
-import type { Ambulance, Camera, Event, Hospital, StatisticsResponse } from "../types";
+import type { Ambulance, Camera, Event, Hospital } from "../types";
 
 const REFRESH_INTERVAL = 10000; // Match the 10-second analysis interval
 
@@ -26,7 +19,7 @@ export function useEvents() {
       try {
         return await getEvents();
       } catch {
-        return mockEvents;
+        return [];
       }
     },
     refetchInterval: REFRESH_INTERVAL, // Refetch every 10 seconds
@@ -51,7 +44,7 @@ export function useCameras() {
       try {
         return await getCameras();
       } catch {
-        return mockCameras;
+        return [];
       }
     },
     refetchInterval: REFRESH_INTERVAL,
@@ -76,7 +69,7 @@ export function useAmbulances() {
       try {
         return await getAmbulances();
       } catch {
-        return mockAmbulances;
+        return [];
       }
     },
     refetchInterval: REFRESH_INTERVAL,
@@ -101,7 +94,7 @@ export function useHospitals() {
       try {
         return await getHospitals();
       } catch {
-        return mockHospitals;
+        return [];
       }
     },
     refetchInterval: REFRESH_INTERVAL,
@@ -114,28 +107,4 @@ export function useHospitals() {
     ...query,
     data: query.data ?? [],
   };
-}
-
-/**
- * Fetch statistics with auto-refresh.
- */
-export function useStatistics() {
-  const query = useQuery<StatisticsResponse>({
-    queryKey: ["statistics"],
-    queryFn: async () => {
-      try {
-        return await getStatistics();
-      } catch (error) {
-        console.error("Statistics fetch error:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to load statistics");
-      }
-    },
-    refetchInterval: REFRESH_INTERVAL,
-    refetchIntervalInBackground: true,
-    staleTime: 2000,
-    retry: 3,
-    retryDelay: 1000,
-  });
-
-  return query;
 }

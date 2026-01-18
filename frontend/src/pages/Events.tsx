@@ -8,7 +8,7 @@ import {
   type HeaderGroup,
   type Row,
 } from "@tanstack/react-table";
-import { useEvents } from "../hooks/api";
+import { useCameras, useEvents } from "../hooks/api";
 import type { Event } from "../types";
 
 const formatTimestamp = (timestamp?: string | Date) => {
@@ -37,9 +37,17 @@ type EventsPageProps = {
 };
 
 export default function EventsPage({ onSelectEvent }: EventsPageProps) {
-  const { data: eventsData, isLoading, isError, error, refetch, isRefetching } = useEvents();
+  const {
+    data: eventsData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useEvents();
   const events: Event[] = Array.isArray(eventsData) ? eventsData : [];
   const [nextEventCountdown, setNextEventCountdown] = useState(10);
+  const { data: cameras } = useCameras();
   const [lastEventCount, setLastEventCount] = useState(0);
   const [lastRefetchTime, setLastRefetchTime] = useState<number>(Date.now());
 
@@ -126,7 +134,8 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
         accessorKey: "camera_name",
         cell: (info: CellContext<Event, unknown>) => {
           const event = info.row.original;
-          const cameraName = event.camera_name || event.camera_id;
+          const camera = cameras.find((cam) => cam._id === event.camera_id);
+          const cameraName = camera ? camera.name || camera._id : "—";
           return (
             <span className="text-slate-300 font-mono text-xs">
               {cameraName}
@@ -158,7 +167,9 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
         header: "Time",
         accessorKey: "created_at",
         cell: (info: CellContext<Event, unknown>) => {
-          const timestamp = info.getValue() as string | Date | undefined;
+          const timestamp: Date | undefined = info.getValue()
+            ? new Date((info.getValue() as string) + "Z")
+            : undefined;
           return (
             <div className="flex flex-col">
               <span className="text-slate-400 text-xs">
@@ -195,7 +206,9 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
             <span className="text-xs text-slate-400">
               {isRefetching ? "Refreshing..." : "Next refresh in"}
             </span>
-            <span className={`text-lg font-bold ${isRefetching ? "text-cyan-300 animate-pulse" : "text-cyan-400"}`}>
+            <span
+              className={`text-lg font-bold ${isRefetching ? "text-cyan-300 animate-pulse" : "text-cyan-400"}`}
+            >
               {isRefetching ? "..." : `${nextEventCountdown}s`}
             </span>
           </div>
@@ -249,7 +262,10 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
             <tbody className="divide-y divide-white/5 bg-slate-950">
               {table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-400">
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-8 text-center text-slate-400"
+                  >
                     No events yet. New events will appear every 10 seconds.
                   </td>
                 </tr>
@@ -267,7 +283,7 @@ export default function EventsPage({ onSelectEvent }: EventsPageProps) {
                           ? "bg-cyan-500/5 border-l-2 border-l-cyan-500"
                           : "hover:bg-slate-900/40"
                       }`}
-                      onClick={() => onSelectEvent?.(event.id)}
+                      onClick={() => onSelectEvent?.(event._id)}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-4 py-3">

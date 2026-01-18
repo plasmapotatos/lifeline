@@ -19,7 +19,7 @@ export default function CameraMarker({
   onSelect,
   onHover,
 }: CameraMarkerProps) {
-  const cameraLabel = camera.name ? camera.name : `Camera ${camera.id}`;
+  const cameraLabel = camera.name ? camera.name : `Camera ${camera._id}`;
 
   return (
     <Marker longitude={camera.lng} latitude={camera.lat}>

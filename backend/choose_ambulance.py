@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import math
+from schemas import Point
 from database import init_db
 import asyncio
 from pathlib import Path
@@ -14,10 +16,24 @@ from models import Ambulance, AmbulanceStatus, Event, PydanticObjectId
 from datetime import datetime
 from models import Ambulance, AmbulanceStatus
 from maps_call import compute_route_eta_and_path
-from routes.cameras import calculate_distance
 
 
-async def find_nearest_idle_ambulance(event_id: PydanticObjectId):
+def calculate_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Calculate distance between two points in kilometers (Haversine formula)."""
+    R = 6371  # Earth radius in km
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlng / 2) ** 2
+    )
+    c = 2 * math.asin(math.sqrt(a))
+    return R * c
+
+
+async def get_ambulance_and_path(event_id: PydanticObjectId):
     """
     Find the nearest idle ambulance, compute ETA and path, and
     atomically mark it as ENROUTE with ETA and timestamp.
@@ -31,7 +47,7 @@ async def find_nearest_idle_ambulance(event_id: PydanticObjectId):
     event_lng = event.lng
 
     ambulances = await Ambulance.find({"status": AmbulanceStatus.IDLE}).to_list()
-
+    print(ambulances)
     if not ambulances:
         print("No idle ambulances found.")
         return None, None, None
@@ -58,34 +74,14 @@ async def find_nearest_idle_ambulance(event_id: PydanticObjectId):
         )
         if eta is not None and eta < best_eta:
             best_eta = eta
-            best_path = path
+            best_path = [Point(lat=pt[0], lng=pt[1]) for pt in path]
     except Exception as e:
         print(f"Error computing route for best ambulance {best_ambulance.id}: {e}")
+        return None, None, None
 
     if best_ambulance is None:
         return None, None, None
 
-    # Atomically update the ambulance in MongoDB
-    updated = await Ambulance.find_one(
-        {"_id": best_ambulance.id, "status": AmbulanceStatus.IDLE}
-    ).update(
-        {
-            "$set": {
-                "status": AmbulanceStatus.ENROUTE,
-                "event_id": event_id,
-                "eta_seconds": best_eta,
-                "updated_at": datetime.utcnow(),
-            }
-        }
-    )
-
-    if updated.matched_count == 0:
-        # Another process grabbed it first
-        print("Ambulance was already taken.")
-        return None, None, None
-
-    # Return the updated ambulance info, ETA, and path
-    # Reload the ambulance document if you need all fields
     best_ambulance = await Ambulance.get(best_ambulance.id)
     return best_ambulance, best_eta, best_path
 
@@ -93,9 +89,9 @@ async def find_nearest_idle_ambulance(event_id: PydanticObjectId):
 async def main():
     await init_db()
     # Example coordinates
-    event_id = PydanticObjectId("696c06ed7b77d573b3d9d6d6")
+    events = await Event.find_all().to_list()
 
-    nearest_ambulance, eta, path = await find_nearest_idle_ambulance(event_id)
+    nearest_ambulance, eta, path = await get_ambulance_and_path(events[0].id)
 
     if nearest_ambulance:
         print(f"Nearest ambulance: {nearest_ambulance.id}, ETA: {eta} seconds")

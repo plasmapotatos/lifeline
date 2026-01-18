@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { triggerCameraEmergency } from "../../api/controller";
+import { useState } from "react";
+import { getLatestClipURL, triggerCameraEmergency } from "../../api/controller";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Camera, Event } from "../../types";
 
@@ -8,22 +8,11 @@ type CameraDrawerProps = {
   events: Event[];
 };
 
-/**
- * Drawer content for a city camera.
- */
 export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
   const [isTriggering, setIsTriggering] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [imageKey, setImageKey] = useState(0);
+  const [description, setDescription] = useState("");
   const queryClient = useQueryClient();
-
-  // Refresh camera image every 2 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setImageKey((prev) => prev + 1);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleTriggerEmergency = async () => {
     if (!showConfirm) {
@@ -31,13 +20,20 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
       return;
     }
 
+    if (!description.trim()) {
+      alert("Please enter a description.");
+      return;
+    }
+
     setIsTriggering(true);
     try {
-      await triggerCameraEmergency(camera.id);
-      // Invalidate queries to refresh events
+      const latest_clip_url = await getLatestClipURL(camera.url);
+      console.log("Latest clip URL:", latest_clip_url);
+      await triggerCameraEmergency(camera._id, description, latest_clip_url);
       await queryClient.invalidateQueries({ queryKey: ["events"] });
       await queryClient.invalidateQueries({ queryKey: ["cameras"] });
       setShowConfirm(false);
+      setDescription("");
     } catch (error) {
       console.error("Failed to trigger emergency:", error);
       alert("Failed to trigger emergency. Please try again.");
@@ -45,6 +41,7 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
       setIsTriggering(false);
     }
   };
+
   return (
     <div className="space-y-4">
       <div>
@@ -53,29 +50,37 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
           {events.length} recorded events
         </p>
       </div>
+
       <img
-        src={`${camera.latest_frame_url}?t=${imageKey}`}
-        alt={`Camera snapshot - ${camera.name || camera.id}`}
+        src={`${camera.url}/mjpeg`}
+        alt={`Camera snapshot - ${camera.name || camera._id}`}
         className="w-full rounded-2xl border border-white/10"
-        key={`${camera.id}-${imageKey}`}
       />
 
-      {/* Manual Emergency Trigger Button */}
+      {/* Manual Emergency Trigger */}
       <div className="space-y-2">
         {!showConfirm ? (
           <button
             type="button"
             onClick={handleTriggerEmergency}
-            disabled={isTriggering}
-            className="w-full rounded-xl border-2 border-red-500/50 bg-red-500/20 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/30 hover:border-red-500/70 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-xl border-2 border-red-500/50 bg-red-500/20 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/30"
           >
             🚨 Trigger Emergency
           </button>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-xs text-slate-300">
-              Confirm emergency trigger for {camera.name}?
+              Describe the emergency for {camera.name}
             </p>
+
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Person collapsed and unresponsive"
+              className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              rows={3}
+            />
+
             <div className="flex gap-2">
               <button
                 type="button"
@@ -85,11 +90,14 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
               >
                 {isTriggering ? "Triggering..." : "Confirm Emergency"}
               </button>
+
               <button
                 type="button"
-                onClick={() => setShowConfirm(false)}
-                disabled={isTriggering}
-                className="flex-1 rounded-xl border border-white/20 bg-slate-800/60 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800/80 disabled:opacity-50"
+                onClick={() => {
+                  setShowConfirm(false);
+                  setDescription("");
+                }}
+                className="flex-1 rounded-xl border border-white/20 bg-slate-800/60 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800/80"
               >
                 Cancel
               </button>
@@ -98,6 +106,7 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
         )}
       </div>
 
+      {/* Recent Events */}
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
           Recent Events
@@ -105,7 +114,7 @@ export default function CameraDrawer({ camera, events }: CameraDrawerProps) {
         <ul className="space-y-2 text-xs text-slate-300">
           {events.slice(0, 5).map((event) => (
             <li
-              key={event.id}
+              key={event._id}
               className="rounded-xl border border-white/10 bg-slate-900/60 px-3 py-2"
             >
               {event.title}

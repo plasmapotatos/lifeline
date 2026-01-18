@@ -59,19 +59,19 @@ async def seed_data():
         {
             "lat": base_lat + 0.0000,
             "lng": base_lng + -0.0000,
-            "latest_frame_url": "http://localhost:5055/latest_frame",
+            "url": "http://localhost:5055",
             "name": "CAM_12",  # Camera 1 - port 5055
         },
         {
             "lat": base_lat + 0.0035,
             "lng": base_lng + 0.0027,
-            "latest_frame_url": "http://localhost:5056/latest_frame",
+            "url": "http://localhost:5056",
             "name": "Astra-12",  # Camera 2 - port 5056 (matches start-all.ts)
         },
         {
             "lat": base_lat + -0.0034,
             "lng": base_lng + 0.0035,
-            "latest_frame_url": "http://localhost:5057/latest_frame",
+            "url": "http://localhost:5057",
             "name": "Astra-18",  # Camera 3 - port 5057 (Astra cameras use hyphens)
         },
     ]
@@ -116,29 +116,29 @@ async def seed_data():
     await first_event.insert()
 
     # 🔹 Seed ambulances (one per hospital)
-    ambulances = []
-    for index, hospital in enumerate(hospitals_data):
-        ambulance = Ambulance(
-            lat=hospital["lat"] + 0.0001,
-            lng=hospital["lng"] - 0.0002,
+    ambulances = [
+        Ambulance(
+            lat=hospitals_data[0]["lat"] + 0.0010,
+            lng=hospitals_data[0]["lng"] + 0.0010,
+            name="Presbyterian 1",
             status=AmbulanceStatus.IDLE,
             updated_at=datetime.utcnow(),
-        )
-
-        if index == 0:
-            path_points = [
-                Point(
-                    lat=hospital["lat"]
-                    + (event_location.lat - hospital["lat"]) * (step / 10),
-                    lng=hospital["lng"]
-                    + (event_location.lng - hospital["lng"]) * (step / 10),
-                )
-                for step in range(1, 11)
-            ]
-            ambulance.path = path_points
-            ambulance.event_id = first_event.id
-
-        ambulances.append(ambulance)
+        ),
+        Ambulance(
+            lat=hospitals_data[1]["lat"] + 0.0010,
+            lng=hospitals_data[1]["lng"] + 0.0010,
+            name="Mercy 12",
+            status=AmbulanceStatus.IDLE,
+            updated_at=datetime.utcnow(),
+        ),
+        Ambulance(
+            lat=hospitals_data[2]["lat"] + 0.0010,
+            lng=hospitals_data[2]["lng"] + 0.0010,
+            name="Allegheny 42",
+            status=AmbulanceStatus.IDLE,
+            updated_at=datetime.utcnow(),
+        ),
+    ]
     await Ambulance.insert_many(ambulances)
 
     logger.info(

@@ -8,7 +8,6 @@ import LifelineMap from "./components/LifelineMap";
 import LiveDataPanel from "./components/LiveDataPanel";
 import Navbar from "./components/Navbar";
 import EventsPage from "./pages/Events";
-import StatisticsPage from "./pages/Statistics";
 import { useAmbulances, useCameras, useEvents } from "./hooks/api";
 import { useLiveData } from "./hooks/useLiveData";
 import type { Ambulance, Camera, DrawerSelection, Event } from "./types";
@@ -34,21 +33,21 @@ function App() {
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<
     string[]
   >([]);
-  const [activeTab, setActiveTab] = useState<"map" | "events" | "statistics">("map");
+  const [activeTab, setActiveTab] = useState<"map" | "events">("map");
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const items = events
       .filter((event) => isEmergencySeverity(event.severity))
       .map((event) => {
         const assignedAmbulance = ambulances.find(
-          (ambulance) => String(ambulance.id) === String(event.ambulance_id),
+          (ambulance) => String(ambulance._id) === String(event.ambulance_id),
         );
         const etaMinutes =
           assignedAmbulance?.eta_seconds != null
             ? Math.max(1, Math.round(assignedAmbulance.eta_seconds / 60))
             : null;
         return {
-          id: `alert-${event.id}`,
+          id: `alert-${event._id}`,
           type: "alert",
           message: `Emergency: ${event.title} • Severity ${event.severity}${
             etaMinutes ? ` • ETA ${etaMinutes} min` : ""
@@ -64,13 +63,13 @@ function App() {
   const selectedEntity = useMemo(() => {
     if (!selection) return null;
     if (selection.type === "event") {
-      return events.find((event) => event.id === selection.id) ?? null;
+      return events.find((event) => event._id === selection.id) ?? null;
     }
     if (selection.type === "camera") {
-      return cameras.find((camera) => camera.id === selection.id) ?? null;
+      return cameras.find((camera) => camera._id === selection.id) ?? null;
     }
     return (
-      ambulances.find((ambulance) => ambulance.id === selection.id) ?? null
+      ambulances.find((ambulance) => ambulance._id === selection.id) ?? null
     );
   }, [selection, events, cameras, ambulances]);
 
@@ -90,17 +89,13 @@ function App() {
               </main>
               <LiveDataPanel />
             </>
-          ) : activeTab === "events" ? (
+          ) : (
             <main className="flex-1 overflow-y-auto">
               <EventsPage
                 onSelectEvent={(eventId) =>
                   setSelection({ type: "event", id: eventId })
                 }
               />
-            </main>
-          ) : (
-            <main className="flex-1 overflow-y-auto">
-              <StatisticsPage />
             </main>
           )}
 
@@ -136,7 +131,7 @@ function App() {
               <CameraDrawer
                 camera={selectedEntity as Camera}
                 events={events.filter(
-                  (event) => event.camera_id === (selectedEntity as Camera).id,
+                  (event) => event.camera_id === (selectedEntity as Camera)._id,
                 )}
               />
             )}

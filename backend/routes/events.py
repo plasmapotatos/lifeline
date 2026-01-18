@@ -35,7 +35,7 @@ class EventResponse(BaseModel):
         if event.camera_id:
             camera = await Camera.get(event.camera_id)
             camera_name = camera.name if camera else None
-        
+
         return cls(
             id=str(event.id),
             severity=event.severity.value,
@@ -53,7 +53,7 @@ class EventResponse(BaseModel):
         )
 
 
-@router.get("", response_model=List[EventResponse])
+@router.get("", response_model=List[Event])
 async def get_events(status: Optional[EventStatus] = None):
     """Get all events, optionally filtered by status."""
     if status:
@@ -62,7 +62,7 @@ async def get_events(status: Optional[EventStatus] = None):
         events = await Event.find_all().to_list()
 
     # Convert Event documents to EventResponse with camera names
-    return [await EventResponse.from_event(event) for event in events]
+    return events
 
 
 @router.post("/{event_id}/resolve")

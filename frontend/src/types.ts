@@ -4,8 +4,13 @@ export type AmbulanceStatus = "idle" | "enroute" | "unavailable";
 
 export type IdValue = string | number;
 
+export type Point = {
+  lat: number;
+  lng: number;
+};
+
 export type Event = {
-  id: string;
+  _id: string;
   severity: EventSeverity;
   title: string;
   description: string;
@@ -21,25 +26,27 @@ export type Event = {
 };
 
 export type Camera = {
-  id: string;
+  _id: string;
   lat: number;
   lng: number;
-  latest_frame_url: string;
+  url: string;
   name?: string | null;
 };
 
 export type Ambulance = {
-  id: string;
+  _id: string;
   lat: number;
   lng: number;
+  name: string;
   status: AmbulanceStatus;
   event_id: number | null;
   eta_seconds?: number | null;
   updated_at: string;
+  path?: Point[] | null;
 };
 
 export type Hospital = {
-  id: string;
+  _id: string;
   name: string;
   lat: number;
   lng: number;
@@ -52,22 +59,3 @@ export type DrawerSelection =
 
 export const isEmergencySeverity = (severity: EventSeverity) =>
   severity === "emergency";
-
-export type StatisticsResponse = {
-  total_events: number;
-  events_resolved: number;
-  avg_dispatch_time_seconds: number;
-  avg_response_time_seconds: number;
-  active_emergencies: number;
-  severity_breakdown: {
-    informational: number;
-    emergency: number;
-  };
-  fleet_overview: {
-    ambulance_id: string;
-    status: "free" | "assigned" | "in_transit" | "unavailable";
-    current_event_id: string | null;
-    eta_seconds: number | null;
-    events_handled: number;
-  }[];
-};

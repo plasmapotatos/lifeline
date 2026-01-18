@@ -39,7 +39,7 @@ async def compute_route_eta_and_path(
         },
         "travelMode": "DRIVE",
         "routingPreference": "TRAFFIC_AWARE",
-        "departureTime": datetime.utcnow().isoformat() + "Z",
+        "departureTime": "2026-02-15T23:00:00Z",
     }
 
     try:

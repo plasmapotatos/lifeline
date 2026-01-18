@@ -71,14 +71,14 @@ export default function AmbulanceMarker({
         onClick={onSelect}
         onMouseEnter={() =>
           onHover({
-            label: `Ambulance ${ambulance.id}`,
+            label: `Ambulance ${ambulance.name}`,
             lng: position.lng,
             lat: position.lat,
           })
         }
         onMouseLeave={() => onHover(null)}
         className="relative flex h-9 w-9 items-center justify-center transition-transform duration-700"
-        aria-label={`Ambulance ${ambulance.id}`}
+        aria-label={`Ambulance ${ambulance.name}`}
       >
         <span
           className={`relative flex h-7 w-7 items-center justify-center rounded-full border ${

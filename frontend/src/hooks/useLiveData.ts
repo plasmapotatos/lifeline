@@ -11,6 +11,31 @@ type LiveMessage =
 
 type LiveStatus = "connecting" | "open" | "closed" | "error";
 
+/**
+ * Normalize Mongo-style `_id` to `id`
+ */
+function normalizeId<T extends { _id?: unknown; id?: unknown }>(
+  obj: T,
+): T & {
+  id: unknown;
+} {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { _id, ...rest } = obj as any;
+  return {
+    id: _id ?? obj.id,
+    ...rest,
+  };
+}
+
+/**
+ * Normalize arrays of entities
+ */
+function normalizeArray<T extends { _id?: unknown; id?: unknown }>(
+  items: T[],
+): (T & { id: unknown })[] {
+  return items.map(normalizeId);
+}
+
 export function useLiveData() {
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
@@ -37,29 +62,38 @@ export function useLiveData() {
 
     ws.onmessage = (event) => {
       console.log("[Live] Message received:", event.data);
+
       try {
         const message = JSON.parse(event.data) as LiveMessage;
 
         if (message.type === "ambulances") {
-          // Replace the entire ambulances array
-          queryClient.setQueryData<Ambulance[]>(["ambulances"], message.data);
+          queryClient.setQueryData<Ambulance[]>(
+            ["ambulances"],
+            normalizeArray(message.data),
+          );
           return;
         }
 
         if (message.type === "events") {
-          queryClient.setQueryData<Event[]>(["events"], message.data);
+          queryClient.setQueryData<Event[]>(
+            ["events"],
+            normalizeArray(message.data),
+          );
           return;
         }
 
         if (message.type === "cameras") {
-          // Normalize to _id if needed
-          queryClient.setQueryData<Camera[]>(["cameras"], message.data);
+          queryClient.setQueryData<Camera[]>(
+            ["cameras"],
+            normalizeArray(message.data),
+          );
           return;
         }
       } catch (error) {
         console.warn("[Live] Failed to parse message", error);
       }
     };
+
     return () => {
       ws.close();
     };

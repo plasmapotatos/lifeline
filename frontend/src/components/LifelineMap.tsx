@@ -17,6 +17,7 @@ import AmbulanceMarker from "./markers/AmbulanceMarker";
 import CameraMarker from "./markers/CameraMarker";
 import EventMarker from "./markers/EventMarker";
 import HospitalMarker from "./markers/HospitalMarker";
+import AmbulancePaths from "./paths/AmbulancePaths";
 
 type LifelineMapProps = {
   selection: DrawerSelection | null;
@@ -73,9 +74,9 @@ export default function LifelineMap({ selection, onSelect }: LifelineMapProps) {
       };
 
     if (selection.type === "event") {
-      const event = events.find((item) => item.id === selection.id);
+      const event = events.find((item) => item._id === selection.id);
       return {
-        events: new Set(event ? [event.id] : []),
+        events: new Set(event ? [event._id] : []),
         cameras: new Set(event?.camera_id ? [event.camera_id] : []),
         ambulances: new Set(
           event?.ambulance_id ? [String(event.ambulance_id)] : [],
@@ -84,13 +85,13 @@ export default function LifelineMap({ selection, onSelect }: LifelineMapProps) {
     }
 
     if (selection.type === "ambulance") {
-      const ambulance = ambulances.find((item) => item.id === selection.id);
+      const ambulance = ambulances.find((item) => item._id === selection.id);
       return {
         events: new Set(
           ambulance?.event_id ? [String(ambulance.event_id)] : [],
         ),
         cameras: new Set<string>(),
-        ambulances: new Set(ambulance?.id ? [String(ambulance.id)] : []),
+        ambulances: new Set(ambulance?._id ? [String(ambulance._id)] : []),
       };
     }
 
@@ -114,48 +115,53 @@ export default function LifelineMap({ selection, onSelect }: LifelineMapProps) {
         <Layer {...buildingLayer} />
         <NavigationControl position="bottom-right" />
 
-        {events.map((event) => (
-          <EventMarker
-            key={event.id}
-            event={event}
-            isSelected={
-              selection?.type === "event" && selection.id === event.id
-            }
-            isRelated={relatedIds.events.has(String(event.id))}
-            onSelect={() => onSelect({ type: "event", id: event.id })}
-            onHover={setHoverInfo}
-          />
-        ))}
+        <AmbulancePaths ambulances={ambulances} />
+
+        {events.map(
+          (event) =>
+            event.status !== "resolved" && (
+              <EventMarker
+                key={event._id}
+                event={event}
+                isSelected={
+                  selection?.type === "event" && selection.id === event._id
+                }
+                isRelated={relatedIds.events.has(String(event._id))}
+                onSelect={() => onSelect({ type: "event", id: event._id })}
+                onHover={setHoverInfo}
+              />
+            ),
+        )}
 
         {cameras.map((camera) => (
           <CameraMarker
-            key={camera.id}
+            key={camera._id}
             camera={camera}
             isSelected={
-              selection?.type === "camera" && selection.id === camera.id
+              selection?.type === "camera" && selection.id === camera._id
             }
-            isRelated={relatedIds.cameras.has(camera.id)}
-            onSelect={() => onSelect({ type: "camera", id: camera.id })}
+            isRelated={relatedIds.cameras.has(camera._id)}
+            onSelect={() => onSelect({ type: "camera", id: camera._id })}
             onHover={setHoverInfo}
           />
         ))}
 
         {ambulances.map((ambulance) => (
           <AmbulanceMarker
-            key={ambulance.id}
+            key={ambulance._id}
             ambulance={ambulance}
             isSelected={
-              selection?.type === "ambulance" && selection.id === ambulance.id
+              selection?.type === "ambulance" && selection.id === ambulance._id
             }
-            isRelated={relatedIds.ambulances.has(String(ambulance.id))}
-            onSelect={() => onSelect({ type: "ambulance", id: ambulance.id })}
+            isRelated={relatedIds.ambulances.has(String(ambulance._id))}
+            onSelect={() => onSelect({ type: "ambulance", id: ambulance._id })}
             onHover={setHoverInfo}
           />
         ))}
 
         {hospitals.map((hospital) => (
           <HospitalMarker
-            key={hospital.id}
+            key={hospital._id}
             hospital={hospital}
             onHover={setHoverInfo}
           />

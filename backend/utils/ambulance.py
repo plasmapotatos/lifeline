@@ -12,10 +12,6 @@ from schemas import Point
 logger = logging.getLogger(__name__)
 
 
-def _resolve_status(status_name: str, fallback: AmbulanceStatus) -> AmbulanceStatus:
-    return getattr(AmbulanceStatus, status_name, fallback)
-
-
 def _set_location(ambulance: Ambulance, point: Point) -> None:
     if hasattr(ambulance, "location"):
         ambulance.location = point
@@ -30,20 +26,30 @@ async def _walk_path(
     status: AmbulanceStatus,
     update_interval_ms: int,
 ) -> None:
+    # Initialize ETA to total number of seconds remaining
+    eta_seconds = len(path) * (update_interval_ms / 1000)
+
     while path:
         next_point = path.pop(0)
         _set_location(ambulance, next_point)
         ambulance.status = status
         ambulance.path = path
+
+        # Update ETA
+        ambulance.eta_seconds = max(0, eta_seconds)
         await ambulance.save()
         await broadcast_all("ambulances")
+
         logger.info(
-            "Ambulance %s moved to %s,%s",
+            "Ambulance %s moved to %s,%s | ETA: %.1fs",
             ambulance.id,
             next_point.lat,
             next_point.lng,
+            ambulance.eta_seconds,
         )
+
         await asyncio.sleep(update_interval_ms / 1000)
+        eta_seconds -= update_interval_ms / 1000
 
 
 async def simulate_ambulance(
@@ -60,11 +66,9 @@ async def simulate_ambulance(
 
     original_path = list(ambulance.path)
 
-    enroute_status = _resolve_status("ENROUTE", AmbulanceStatus.IDLE)
-    returning_status = _resolve_status("RETURNING", AmbulanceStatus.IDLE)
-    free_status = _resolve_status("FREE", AmbulanceStatus.IDLE)
-
-    await _walk_path(ambulance, list(original_path), enroute_status, update_interval_ms)
+    await _walk_path(
+        ambulance, list(original_path), AmbulanceStatus.ENROUTE, update_interval_ms
+    )
 
     if ambulance.event_id:
         await asyncio.sleep(5)
@@ -76,10 +80,13 @@ async def simulate_ambulance(
             await broadcast_all("events")
 
     reverse_path = list(reversed(original_path))
-    await _walk_path(ambulance, reverse_path, returning_status, update_interval_ms)
+    await _walk_path(
+        ambulance, reverse_path, AmbulanceStatus.ENROUTE, update_interval_ms
+    )
 
     ambulance.path = []
-    ambulance.status = free_status
+    ambulance.status = AmbulanceStatus.IDLE
+    ambulance.eta = None
     await ambulance.save()
     await broadcast_all("ambulances")
 

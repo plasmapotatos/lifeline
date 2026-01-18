@@ -1,4 +1,4 @@
-import type { Ambulance, Camera, Event, Hospital, StatisticsResponse } from "../types";
+import type { Ambulance, Camera, Event, Hospital } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -43,25 +43,36 @@ export function getHospitals(): Promise<Hospital[]> {
 }
 
 /**
- * Fetch statistics from the backend.
- */
-export function getStatistics(): Promise<StatisticsResponse> {
-  return fetchJson<StatisticsResponse>("/statistics");
-}
-
-/**
  * Manually trigger an emergency event for a camera.
  */
-export async function triggerCameraEmergency(cameraId: string): Promise<Event> {
-  const response = await fetch(`${API_BASE}/cameras/${cameraId}/trigger_emergency`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  
+export async function triggerCameraEmergency(
+  cameraId: string,
+  description: string,
+  reference_clip_url?: string,
+): Promise<Event> {
+  const response = await fetch(
+    `${API_BASE}/cameras/${cameraId}/trigger_emergency`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description, reference_clip_url }),
+    },
+  );
+
   if (!response.ok) {
     throw new Error(`Failed to trigger emergency: ${response.status}`);
   }
-  
+
   const data = await response.json();
   return data.event;
+}
+
+export async function getLatestClipURL(url: string): Promise<string> {
+  const response = await fetch(`${url}/get_recent`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get latest clip URL: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.clip_url;
 }
