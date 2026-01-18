@@ -8,6 +8,7 @@ import LifelineMap from "./components/LifelineMap";
 import LiveDataPanel from "./components/LiveDataPanel";
 import Navbar from "./components/Navbar";
 import EventsPage from "./pages/Events";
+import StatisticsPage from "./pages/Statistics";
 import { useAmbulances, useCameras, useEvents } from "./hooks/api";
 import { useLiveData } from "./hooks/useLiveData";
 import type { Ambulance, Camera, DrawerSelection, Event } from "./types";
@@ -33,7 +34,7 @@ function App() {
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<
     string[]
   >([]);
-  const [activeTab, setActiveTab] = useState<"map" | "events">("map");
+  const [activeTab, setActiveTab] = useState<"map" | "events" | "statistics">("map");
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const items = events
@@ -89,13 +90,17 @@ function App() {
               </main>
               <LiveDataPanel />
             </>
-          ) : (
+          ) : activeTab === "events" ? (
             <main className="flex-1 overflow-y-auto">
               <EventsPage
                 onSelectEvent={(eventId) =>
                   setSelection({ type: "event", id: eventId })
                 }
               />
+            </main>
+          ) : (
+            <main className="flex-1 overflow-y-auto">
+              <StatisticsPage />
             </main>
           )}
 

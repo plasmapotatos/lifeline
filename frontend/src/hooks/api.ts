@@ -4,8 +4,9 @@ import {
   getCameras,
   getEvents,
   getHospitals,
+  getStatistics,
 } from "../api/controller";
-import type { Ambulance, Camera, Event, Hospital } from "../types";
+import type { Ambulance, Camera, Event, Hospital, Statistics } from "../types";
 
 const REFRESH_INTERVAL = 10000; // Match the 10-second analysis interval
 
@@ -107,4 +108,25 @@ export function useHospitals() {
     ...query,
     data: query.data ?? [],
   };
+}
+
+/**
+ * Fetch statistics with auto-refresh.
+ */
+export function useStatistics() {
+  const query = useQuery<Statistics>({
+    queryKey: ["statistics"],
+    queryFn: async () => {
+      try {
+        return await getStatistics();
+      } catch (error) {
+        throw error;
+      }
+    },
+    refetchInterval: REFRESH_INTERVAL,
+    refetchIntervalInBackground: true,
+    staleTime: 5000,
+  });
+
+  return query;
 }

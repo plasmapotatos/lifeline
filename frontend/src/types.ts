@@ -59,3 +59,22 @@ export type DrawerSelection =
 
 export const isEmergencySeverity = (severity: EventSeverity) =>
   severity === "emergency";
+
+export type Statistics = {
+  total_events: number;
+  events_resolved: number;
+  avg_dispatch_time_seconds: number;
+  avg_response_time_seconds: number;
+  active_emergencies: number;
+  severity_breakdown: {
+    informational: number;
+    emergency: number;
+  };
+  fleet_overview: Array<{
+    ambulance_id: string;
+    status: string;
+    current_event_id: string | null;
+    eta_seconds: number | null;
+    events_handled: number;
+  }>;
+};

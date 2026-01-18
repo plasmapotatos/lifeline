@@ -35,7 +35,6 @@ class EventResponse(BaseModel):
         if event.camera_id:
             camera = await Camera.get(event.camera_id)
             camera_name = camera.name if camera else None
-
         return cls(
             id=str(event.id),
             severity=event.severity.value,

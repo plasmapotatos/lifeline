@@ -1,4 +1,4 @@
-import type { Ambulance, Camera, Event, Hospital } from "../types";
+import type { Ambulance, Camera, Event, Hospital, Statistics } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -75,4 +75,11 @@ export async function getLatestClipURL(url: string): Promise<string> {
   }
   const data = await response.json();
   return data.clip_url;
+}
+
+/**
+ * Fetch statistics from the backend.
+ */
+export function getStatistics(): Promise<Statistics> {
+  return fetchJson<Statistics>("/statistics");
 }
