@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+  }
+}
+
+@layer components {
+  .maplibregl-popup-content {
+    @apply rounded-xl border border-white/10 bg-slate-900 text-slate-100 shadow-xl;
+  }
+
+  .maplibregl-popup-tip {
+    border-top-color: rgb(15 23 42);
+    border-bottom-color: rgb(15 23 42);
+  }
+}
