@@ -176,7 +176,7 @@ export default function LifelineMap({ selection, onSelect }: LifelineMapProps) {
             offset={20}
             anchor="top"
           >
-            <div className="rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100">
+            <div className=" bg-slate-900 px-3 py-2 text-xs text-slate-100">
               {hoverInfo.label}
             </div>
           </Popup>
