@@ -44,7 +44,7 @@ Open three terminals and run each service:
 ### 3) Frontend
 `cd frontend && npm run dev`
 
-Then open http://localhost:5173
+Then open http://localhost:5173 on local browser
 
 ## Notes
 - The frontend consumes live updates over WebSockets at `/ws/live`.
